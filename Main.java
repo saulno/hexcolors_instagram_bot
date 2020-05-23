@@ -3,18 +3,27 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+
 import javax.swing.JPanel;
 import javax.swing.JFrame;
-import java.awt.image.BufferedImage;
+
 import java.io.IOException;
 import java.io.File;
-import javax.imageio.ImageIO;
+import java.io.FileWriter;
 import java.nio.file.Files; 
 import java.nio.file.Paths;
+import javax.imageio.ImageIO;
+
 import java.util.ArrayList;
+import java.util.Random; 
+
+import java.sql.Timestamp;
 
 import org.brunocvcunha.instagram4j.Instagram4j;
-import org.brunocvcunha.instagram4j.requests.InstagramUploadAlbumRequest;
+import org.brunocvcunha.instagram4j.requests.InstagramUploadPhotoRequest;
+
+import org.apache.http.client.ClientProtocolException;
 
 /**
  * Instagram bot to upload hex colors
@@ -25,10 +34,11 @@ public class Main {
     static class Window extends JFrame {
         private Canvas canvas;
         private Instagram4j insta;
+        FileWriter logger;
 
-        public Window(String username, String password, int start, int end) {
-            setSize(402, 424);
-            setDefaultCloseOperation(EXIT_ON_CLOSE);
+        public Window(String username, String password, int start, int numberOfPosts) {
+            setSize(602, 624);
+            setDefaultCloseOperation(EXIT_ON_CLOSE);;
             setLayout(new GridLayout(1,1));
             initComponents();
             setFocusable(true);
@@ -36,24 +46,129 @@ public class Main {
             setVisible(true);
 
             try {
-                insta = Instagram4j.builder().username(username).password(password).build();
-                insta.setup();
-                insta.login();
-            } catch (Exception e) {
+                logger = new FileWriter("log.txt", true);
+
+                try {
+                    login(username, password);
+                    postImages(start, numberOfPosts);
+                } catch (ClientProtocolException e) {
+                    System.out.println("Instagram request failed");
+                    String error = "[" + new Timestamp(System.currentTimeMillis()) + "] -> ERROR: ";
+                    error += e.getMessage() + "\n";
+                    logger.write(error);
+                } catch (InterruptedException e) {
+                    System.out.println("Sleeper failed");
+                    String error = "[" + new Timestamp(System.currentTimeMillis()) + "] -> ERROR: ";
+                    error += e.getMessage() + "\n";
+                    logger.write(error);
+                } catch (IOException e) {
+                    System.out.println("Logger failed");
+                    String error = "[" + new Timestamp(System.currentTimeMillis()) + "] -> ERROR: ";
+                    error += e.getMessage() + "\n";
+                    logger.write(error);
+                }
+
+                logger.close();
+
+            } catch (IOException e) {
+                System.out.println("Failed to open the log file");
                 e.printStackTrace();
             }
-            
-            createImages(start);
+
+            System.exit(0);
         }
 
-        public void initComponents() {
+        private void initComponents() {
             canvas = new Canvas();
             add(canvas);
+        }
+
+        private void login(String username, String password) throws ClientProtocolException, IOException {
+            insta = Instagram4j.builder().username(username).password(password).build();
+            insta.setup();
+            insta.login();
+        }
+
+        private void postImages(int start, int numberOfPosts) throws ClientProtocolException, InterruptedException, IOException {
+            int sleepSeconds = 0;
+            Random rand = new Random();
+            for (int n = 0; n < numberOfPosts; n++) {
+                float percentage = ((float)n / (float)(numberOfPosts- 1.0f)) * 100.0f;
+                System.out.println("n: " + n + " --> " + percentage + "%");
+
+                uploadImage(start + n);
+                
+                sleepSeconds = rand.nextInt(61) + 120;
+                Thread.sleep(sleepSeconds*1000);
+            }
+
+            System.out.println("===== FINISHED =====");
+        }
+
+        public void uploadImage(int start) throws ClientProtocolException, IOException {
+            ArrayList<Color> colors = colorsList(start);
+            String caption = createCaptionImage(colors, start);
+
+            canvas.setColors(colors);
+            
+            BufferedImage image = new BufferedImage(602, 604, BufferedImage.TYPE_INT_RGB);
+            Graphics graphics = image.createGraphics();
+            canvas.print(graphics);
+            graphics.dispose();
+            
             canvas.repaint();
+
+            String imgPath = "./images/" + start + ".png";
+            File imageFile = new File(imgPath);
+            ImageIO.write(image, "png", imageFile);
+            
+            insta.sendRequest(new InstagramUploadPhotoRequest(
+                imageFile,
+                caption
+            ));
+            
+            // Files.deleteIfExists(Paths.get(imgPath)); 
+
+            String log = "[" + new Timestamp(System.currentTimeMillis()) + "] -> IMG: " + start + "\n";
+            log += caption + "\n\n";
+            logger.write(log);
+        }
+
+        private ArrayList<Color> colorsList(int start) {
+            ArrayList<Color> colors = new ArrayList<>();
+            int step = 559240;
+
+            for (int i = 0; i < 30; i++) {
+                int currentColorDecimal = start + i * step;
+                int r = (currentColorDecimal / 256 / 256) % 256;
+                int g = (currentColorDecimal / 256) % 256;
+                int b = currentColorDecimal % 256;
+
+                colors.add(new Color(r, g, b));
+            }
+
+            return colors;
+        }
+
+        private String createCaptionImage(ArrayList<Color> colors, int start) {
+            String caption = "Hex code colors (" + start + "): \n";
+            int index = 0;
+            for (int row = 0; row < 10; row++) {
+                for (int column = 0; column < 3; column++) {
+                    Color c = colors.get(index);
+                    caption += hexCodeRGB(c.getRed(), c.getGreen(), c.getBlue());
+                    caption += " ";
+
+                    index++;
+                }
+                caption += "\n";
+            }
+            
+            return caption;
         }
 
         private String hexCodeRGB(int r, int g, int b) {
-            String hexColor = "";
+            String hexColor = "#";
             hexColor += Integer.toHexString(r).length() > 1 ? 
                             Integer.toHexString(r) : "0"+Integer.toHexString(r);
             hexColor += Integer.toHexString(g).length() > 1 ? 
@@ -61,79 +176,19 @@ public class Main {
             hexColor += Integer.toHexString(b).length() > 1 ? 
                             Integer.toHexString(b) : "0"+Integer.toHexString(b);
             
-            System.out.println(r + " " + g + " " + b + " " + hexColor);
             return hexColor;
-        }
-
-        private String createCaptionImage(int ri, int g, int b) {
-            String caption = "";
-            caption += "PAGE " + (ri/32 + 1) + ":\n";
-            for (int i = 0; i < 8; i++) {
-                for (int j = 0; j < 4; j++) {
-                    
-                }
-            }
-            return caption;
-
-        }
-
-        public void createImages(int start) {
-            BufferedImage image = new BufferedImage(402, 404, BufferedImage.TYPE_INT_RGB);
-            Graphics graphics = image.createGraphics();
-            ArrayList<File> files = new ArrayList<>();
-            String caption = "";
-
-            int ri = (start / 256 / 256) % 256;
-            // int rf = (end / 256 / 256) % 256;
-            int gi = (start / 256) % 256;
-            // int gf = (end / 256) % 256;
-            int bi = start % 256;
-            // int bf = end % 256;
-            
-            while (ri < 256) {
-                canvas.setInitialColor(ri, gi, bi);
-                
-                image = new BufferedImage(402, 404, BufferedImage.TYPE_INT_RGB);
-                graphics = image.createGraphics();
-                canvas.print(graphics);
-                try {
-                    File imageFile = new File("./images/" + ri + ".jpg");
-                    files.add(imageFile);
-                    // caption += createCaptionImage(ri, gi, bi);
-                    ImageIO.write(image, "jpg", imageFile);
-                    ri += 32;
-                } catch (Exception e) { 
-                    e.printStackTrace();
-                }
-            }
-            System.out.println(files.size());
-            try {
-                Object res = insta.sendRequest(new InstagramUploadAlbumRequest(
-                    files,
-                    "#test"
-                ));
-
-                System.out.println("------------> " + res);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            // Files.deleteIfExists(Paths.get("./images/" + hexColor + ".jpg")); 
         }
     }
 
     static class Canvas extends JPanel {
-        private int red = 0;
-        private int green = 0;
-        private int blue = 0;
+        private ArrayList<Color> colors = new ArrayList<>();
         private int x = 0;
         private int y = 0;
-        int width = 400;
-        int height = 400;
+        int width = 600;
+        int height = 600;
 
-        public void setInitialColor(int r, int g, int b) {
-            this.red = r;
-            this.green = g;
-            this.blue = b;
+        public void setColors(ArrayList<Color> colors) {
+            this.colors = colors;
         }
         
         /**
@@ -145,27 +200,25 @@ public class Main {
             RoundRectangle2D rect;
             Graphics2D g2 = (Graphics2D) g;
 
-            int runningRed = red;
             x = 0;
             y = 0;
 
             g.setColor(Color.WHITE);
-            g.fillRect(0, 0, 402, 424);
+            g.fillRect(0, 0, 602, 624);
 
-            for (int i = 0; i < 32; i++) {
-                g2.setColor(new Color(runningRed, green, blue));
-                rect = new RoundRectangle2D.Float(x+2, y+2, width/4-2, height/8-2, 15, 15);
+            for (Color c : this.colors) {
+                g2.setColor(c);
+                rect = new RoundRectangle2D.Float(x+2, y+2, width/3-2, height/10-2, 20, 20);
                 g2.fill(rect);
 
-                x = (x + width/4);
+                x = (x + width/3);
                 if (x >= width) {
                     x = 0;
-                    y = (y + height/8);
+                    y = (y + height/10);
                     if (y >= height) {
                         y = 0;
                     }
                 }
-                runningRed++;
             }
         }
     }
@@ -174,7 +227,7 @@ public class Main {
         String username = args[0];
         String password = args[1];
         int start = Integer.parseInt(args[2]);
-        // int end = Integer.parseInt(args[3]);
-        new Window(username, password, start, 0);
+        int numberOfPosts = Integer.parseInt(args[3]);
+        new Window(username, password, start, numberOfPosts);
     }
 }

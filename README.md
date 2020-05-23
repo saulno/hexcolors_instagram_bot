@@ -3,15 +3,13 @@
 Generates solid hex color images and uploads it to @hexcode.colors on Instagram
 
 ## Usage
-A Makefile is included to create the jar file. Run ```make all``` and procede to run the programm. Maven is required.
+A Makefile is included to create the jar file. Run ```make build``` and procede to run the programm. Maven is required. 
+- ```make rebuild``` -> cleans existing files and build project
+- ```make jar``` -> builds jar
+- ```make compile``` -> compiles Main.java
 
-To compile (just if necessary) use ```javac -cp '.:instagram4j-1.15-SNAPSHOT-jar-with-dependencies.jar' Main.java```.
-
-To run use ```java -cp '.:instagram4j-1.15-SNAPSHOT-jar-with-dependencies.jar' Main.java user psswd start end```.
+To run use ```java -cp '.:instagram4j-1.15-SNAPSHOT-jar-with-dependencies.jar' Main.java user psswd start numberOfPosts```.
 - Start and end are integers [0 - 16,777,216) representing the total ammount of RGB colors
-
-## Already uploaded
-- [Monday, 18 May 2020] -> Uploaded [0 - 10]
 
 ## Instagram4j
 

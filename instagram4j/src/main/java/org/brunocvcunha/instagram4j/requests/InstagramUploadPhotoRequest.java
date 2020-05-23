@@ -69,7 +69,7 @@ public class InstagramUploadPhotoRequest extends InstagramRequest<InstagramConfi
 		uploadId = uploadResult.getUpload_id();
 		
 		InstagramConfigureMediaResult configureResult = api.sendRequest(new InstagramConfigurePhotoRequest(file, uploadId, caption));
-		log.info("Configure photo result: " + configureResult);
+		// log.info("Configure photo result: " + configureResult);
 		if(!configureResult.getStatus().equals("ok")) {
 			log.error("Photo configure failed: " + configureResult.getError_type() + " " + configureResult.getMessage());
 		}
