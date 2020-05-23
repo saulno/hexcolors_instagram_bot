@@ -143,7 +143,7 @@ public abstract class InstagramRequest<T> {
 				if (printStr.length() > 128) {
 					printStr = printStr.substring(0, 128);
 				}
-				log.info("Reading " + clazz.getSimpleName() + " from " + printStr);
+				log.info("Reading ---2--- " + clazz.getSimpleName() + " from " + printStr);
 			}
 
 		}

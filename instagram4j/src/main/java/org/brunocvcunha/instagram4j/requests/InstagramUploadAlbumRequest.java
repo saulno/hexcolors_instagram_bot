@@ -65,7 +65,6 @@ public class InstagramUploadAlbumRequest extends InstagramPostRequest<InstagramC
 		List<AlbumChildrenMetadata> uploadIds = this.uploadPhotos();
 		InstagramConfigureAlbumResult configurePhotoResult = api
 				.sendRequest(new InstagramConfigureAlbumRequest(uploadIds, caption));
-
 		if (!configurePhotoResult.getStatus().equalsIgnoreCase("ok")) {
 			log.error("Failed to configure image: " + configurePhotoResult.getMessage());
 		}
