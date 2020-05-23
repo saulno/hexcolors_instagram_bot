@@ -9,7 +9,7 @@ A Makefile is included to create the jar file. Run ```make build``` and procede 
 - ```make compile``` -> compiles Main.java
 
 To run use ```java -cp '.:instagram4j-1.15-SNAPSHOT-jar-with-dependencies.jar' Main.java user psswd start numberOfPosts```.
-- Start and end are integers [0 - 16,777,216) representing the total ammount of RGB colors
+- Start and nomberOfPosts are integers [0 - 559,240] representing the total ammount of RGB colors taking into account each post shows 30 colors
 
 ## Instagram4j
 
